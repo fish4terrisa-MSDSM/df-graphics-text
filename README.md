@@ -1,5 +1,6 @@
 # df-graphics
 `g_src` from Dwarf Fortress, added back `PRINT_MODE: TEXT`.
+Support Dwarf Fortress v53.14
 
 ## Features
  - `PRINT_MODE: TEXT` is now supported.
