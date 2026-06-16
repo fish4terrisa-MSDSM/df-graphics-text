@@ -19,7 +19,7 @@ To build this library, you'll need to:
  - Put `fmod` 2.02 headers in `fmod/inc` and libraries in `fmod/lib/$(uname -m)` (Yes I believe this can also be built on ARM64, not sure why would you want to do that tho. It might offer better compatibility and performance with `box64` this way)
  - Run `make`, and replace `libg_src_lib.so` in the root of Dwarf Fortress with our result library. Then copy `data/init/mouse_emu.txt` to `data/init/` in the root directory of Dwarf Fortress.
 
-I might offer binary build and if I do I'll upload them in Releases, but these arent guaranteed to work and I suggest you building them on your machine. If you use the prebuilt library you'll only need to replace `libg_src_lib.so` and copy `data/init/mouse_emu.txt` to `data/init/` in the root directory of Dwarf Fortress.
+I might offer prebuilt binaries and if I do I'll upload them in Releases, but these arent guaranteed to work and I suggest you building them on your machine. If you use the prebuilt library you'll only need to replace `libg_src_lib.so` and copy `data/init/mouse_emu.txt` to `data/init/` in the root directory of Dwarf Fortress.
 
 ## Bugs
  - You'll experience glitches(e.g. main menu out of bound) if your terminal size isnt big enough.
