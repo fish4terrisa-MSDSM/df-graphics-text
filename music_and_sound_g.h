@@ -15,11 +15,11 @@
 
 #include <variant>
 
-#include "../platform.h"
+#include "platform.h"
 
 #ifndef CUSTOM_SOUND_PLUGINS
-#include "../../fmod/inc/fmod.hpp"
-#include "../../fmod/inc/fmod_common.h"
+#include "fmod.hpp"
+#include "fmod_common.h"
 #endif
 
 #define SOUND_CHANNELNUM 32

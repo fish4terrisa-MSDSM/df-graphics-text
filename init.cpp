@@ -1,4 +1,4 @@
-#include "../release_type.h"
+//#include "../release_type.h"
 
 #include "platform.h"
 #include <string.h>
@@ -15,7 +15,7 @@
 #include <fstream>
 #include <zlib.h>
 #include <unordered_map>
-#include "../zlib/contrib/minizip/unzip.h"
+#include "minizip/unzip.h"
 
 #include "svector.h"
 using std::string;
@@ -656,12 +656,14 @@ void initst::begin() {
         enabler.window.isFullScreen = FALSE;
 #else
 		/// TODO TODO REMOVE THIS AS SOON AS TEXT MODE'S BACK IN
-	if(display.flag.has_flag(INIT_DISPLAY_FLAG_TEXT))
+/*	if(display.flag.has_flag(INIT_DISPLAY_FLAG_TEXT))
 		{
 		display.flag.remove_flag(INIT_DISPLAY_FLAG_TEXT);
 		puts("Text mode is not supported for now");
 		}
-        
+*/        
+		// TEXT MODE BACK BABY!!
+				
         //FULL SCREEN QUERY, UNLESS IT'S ALREADY SET IN INIT
 
         if (!display.flag.has_flag(INIT_DISPLAY_FLAG_TEXT)) {

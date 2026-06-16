@@ -798,6 +798,7 @@ void enablerst::async_loop() {
     } while (have_cmd);
     // Run the main-loop, maybe
     if (!async_paused && (async_frames || (enabler.flag & ENABLERFLAG_MAXFPS))) {
+      update_mouse_emulation();
       if (mainloop()) {
         async_frombox.write(async_msg(async_msg::quit));
         return; // We're done.

@@ -12,7 +12,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <zlib.h>
-#include "../zlib/contrib/minizip/unzip.h"
+#include "minizip/unzip.h"
 
 #include "svector.h"
 using std::string;

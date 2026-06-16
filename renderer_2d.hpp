@@ -4198,14 +4198,18 @@ void do_blank_screen_fill()
 	virtual SDL_Window* get_window() {
 		return window;
 	}
-  virtual void render() {
-    // Render the TTFs, which we left for last
-/*    for (auto it = ttfs_to_render.begin(); it != ttfs_to_render.end(); ++it) {
-      SDL_BlitSurface(it->first, NULL, screen, &it->second);
-    }
-    ttfs_to_render.clear();*/
-    // And flip out.
-	SDL_RenderPresent(sdl_renderer);
+
+	virtual void render() {
+		if (g_mouse_emu.enabled) {
+        SDL_Rect dst;
+        dst.x = dispx_z * g_mouse_emu.cur_x + origin_x;
+        dst.y = dispy_z * g_mouse_emu.cur_y + origin_y;
+        dst.w = dispx_z;
+        dst.h = dispy_z;
+        SDL_SetRenderDrawColor(sdl_renderer, 255, 0, 0, 255);
+        SDL_RenderDrawRect(sdl_renderer, &dst);
+		}
+		SDL_RenderPresent(sdl_renderer);
   }
 
   virtual ~renderer_2d_base() {
@@ -4451,7 +4455,14 @@ private:
 		cur_ty=dispy_z;
 		}
 
-  bool get_precise_mouse_coords(int &px, int &py, int &x, int &y) {
+	bool get_precise_mouse_coords(int &px, int &py, int &x, int &y) {
+    if (g_mouse_emu.enabled) {
+        x = g_mouse_emu.cur_x;
+        y = g_mouse_emu.cur_y;
+        px = x * dispx_z;
+        py = y * dispy_z;
+        return true;
+    }
     int mouse_x, mouse_y;
     SDL_GetMouseState(&mouse_x, &mouse_y);
 	float fake_x,fake_y;

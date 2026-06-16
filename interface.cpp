@@ -12,7 +12,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <zlib.h>
-#include "../zlib/contrib/minizip/unzip.h"
+#include "minizip/unzip.h"
 
 #include "svector.h"
 using std::string;
@@ -45,7 +45,7 @@ using std::string;
 #include <list>
 #include <set>
 
-#include "audio/audio-play.h"
+//#include "audio/audio-play.h"
 int playSoundFromEvent(int eventId);
 
 void dwarf_end_announcements();
@@ -1488,7 +1488,7 @@ char standardstringentry(string &str,int maxlen,unsigned int flag,std::set<Inter
 	else {
 		if(events.count(INTERFACEKEY_SELECT)||events.count(INTERFACEKEY_LEAVESCREEN)||enabler.mouse_rbut) 
 			{
-			playSoundFromEvent(DFAS_CLICK_EVENT_CLICK_GENERIC_SMALL);
+//			playSoundFromEvent(DFAS_CLICK_EVENT_CLICK_GENERIC_SMALL);
 			enabler.set_listen_to_text(false);
 			if ((flag & STRINGENTRY_REMOVEKEYS))
 				{

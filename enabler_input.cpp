@@ -8,6 +8,7 @@
 
 #include <SDL2/SDL.h>
 
+#include "interface.h"
 #include "enabler_input.h"
 #include "init.h"
 extern initst init;
@@ -16,8 +17,9 @@ extern initst init;
 #include "find_files.h"
 #include "svector.h"
 #ifdef CURSES
-//#include "curses.h"
+#include "curses.h"
 #endif
+#include "ViewBase.h"
 using namespace std;
 
 // The timeline events we actually pass back from get_input. Well, no,
@@ -518,6 +520,7 @@ void enabler_inputst::save_keybindings() {
 }
 
 void enabler_inputst::add_input(SDL_Event &e, Uint32 now) {
+  if (handle_mouse_emu_input_sdl(e, now)) return;
   // Before we can use this input, there are some issues to deal with:
   // - SDL provides unicode translations only for key-press events, not
   //   releases. We need to keep track of pressed keys, and generate
@@ -609,16 +612,14 @@ void enabler_inputst::add_input(SDL_Event &e, Uint32 now) {
 // esc is true if this key was part of an escape sequence.
 #ifdef CURSES
 void enabler_inputst::add_input_ncurses(int key, Time now, bool esc) {
-  // TODO: Deal with shifted arrow keys, etc. See man 5 terminfo and tgetent.
-  
-  EventMatch sdl; // Each key may provoke an unicode event, an "SDL-key" event, or both
+  EventMatch sdl;
   const int serial = next_serial();
   sdl.type = type_key;
-  sdl.scancode = 0; // We don't use this.. hang on, who does? ..nobody. FIXME!
+  sdl.scancode = 0;
   sdl.mod = 0;
   sdl.key = SDLK_UNKNOWN;
 
-  if (esc) { // Escape sequence, meaning alt was held. I hope.
+  if (esc) {
     sdl.mod = DFMOD_ALT;
   }
 
@@ -626,20 +627,20 @@ void enabler_inputst::add_input_ncurses(int key, Time now, bool esc) {
     sdl.key = SDLK_RETURN;
   } else if (key == -9) { // Tab
     sdl.key = SDLK_TAB;
-  } else if (key == -27) { // If we see esc here, it's the actual esc key. Hopefully.
+  } else if (key == -27) {
     sdl.key = SDLK_ESCAPE;
   } else if (key == -127) { // Backspace/del
     sdl.key = SDLK_BACKSPACE;
   } else if (key < 0 && key >= -26) { // Control-a through z (but not ctrl-j, or ctrl-i)
     sdl.mod |= DFMOD_CTRL;
-    sdl.key = (SDL_KeyCode)(SDLK_a + (-key) - 1);
+    sdl.key = (SDL_Keycode)(SDLK_a + (-key) - 1);
   } else if (key <= -32 && key >= -126) { // ASCII character set
-    sdl.key = (SDL_KeyCode)-key; // Most of this maps directly to SDL keys, except..
+    sdl.key = (SDL_Keycode)-key;
     if (sdl.key > 64 && sdl.key < 91) { // Uppercase
-      sdl.key = (SDL_KeyCode)(sdl.key + 32); // Maps to lowercase, and
-      sdl.mod |= DFMOD_SHIFT; // Add shift.
+      sdl.key = (SDL_Keycode)(sdl.key + 32);
+      sdl.mod |= DFMOD_SHIFT;
     }
-  } else if (key > 0) { // Symbols such as arrow-keys, etc, no matching unicode.
+  } else if (key > 0) { // Symbols such as arrow-keys, etc.
     switch (key) {
     case KEY_DOWN: sdl.key = SDLK_DOWN; break;
     case KEY_UP: sdl.key = SDLK_UP; break;
@@ -668,27 +669,48 @@ void enabler_inputst::add_input_ncurses(int key, Time now, bool esc) {
     }
   }
 
-  // We may be registering a new mapping, in which case we skip the
-  // rest of this function.
   if (key_registering) {
     if (sdl.key) {
       stored_keys.push_back(sdl);
     }
-    Event e; e.r = REPEAT_NOT; e.repeats = 0; e.time = now; e.serial = serial; e.k = INTERFACEKEY_KEYBINDING_COMPLETE; e.tick = enabler.simticks.load();
+    Event e;
+    e.r = REPEAT_NOT;
+    e.repeats = 0;
+    e.time = now;
+    e.serial = serial;
+    e.k = INTERFACEKEY_KEYBINDING_COMPLETE;
+    e.tick = enabler.simticks;
+    e.macro = false;
     timeline.insert(e);
     key_registering = false;
     return;
   }
-  
-  // Key repeat is handled by the terminal, and we don't get release
-  // events anyway.
-  KeyEvent kev; kev.release = false;
-  Event e; e.r = REPEAT_NOT; e.repeats = 0; e.time = now;
+
+  // Inject text input event if applicable (for search filters, naming screens, etc)
+  if (key < 0 && key >= -1114111) {
+      int unicode = -key;
+      if (unicode >= 32 && unicode != 127) {
+          string utf8 = encode_utf8(unicode);
+          SDL_Event ev;
+          memset(&ev, 0, sizeof(ev));
+          ev.type = SDL_TEXTINPUT;
+          strncpy(ev.text.text, utf8.c_str(), 31);
+          ev.text.text[31] = '\0';
+          enabler.set_text_input(ev);
+      }
+  }
+
   if (sdl.key) {
     set<InterfaceKey> events = key_translation(sdl);
     for (set<InterfaceKey>::iterator k = events.begin(); k != events.end(); ++k) {
+      Event e;
+      e.r = REPEAT_NOT;
+      e.repeats = 0;
+      e.time = now;
       e.serial = serial;
       e.k = *k;
+      e.tick = enabler.simticks;
+      e.macro = false;
       timeline.insert(e);
     }
   }
@@ -1193,4 +1215,303 @@ int enabler_inputst::prefix_end() {
 
 string enabler_inputst::prefix() {
   return prefix_command;
+}
+
+MouseEmulationState g_mouse_emu;
+std::map<EmuKeyBind, EmuAction> emu_bindings;
+
+void trigger_approve() {
+    g_mouse_emu.click_state = MouseEmulationState::CLICK_DOWN;
+}
+
+void move_mouse_emu(int dx, int dy) {
+    g_mouse_emu.cur_x = CLAMP(g_mouse_emu.cur_x + dx, 0, init.display.grid_x - 1);
+    g_mouse_emu.cur_y = CLAMP(g_mouse_emu.cur_y + dy, 0, init.display.grid_y - 1);
+}
+
+void update_mouse_emulation() {
+    if (!g_mouse_emu.enabled) return;
+
+    enabler.tracking_on = 1;
+    gps.mouse_x = g_mouse_emu.cur_x;
+    gps.mouse_y = g_mouse_emu.cur_y;
+
+    if (g_mouse_emu.click_state == MouseEmulationState::CLICK_DOWN) {
+        enabler.mouse_lbut = 1;
+        enabler.mouse_lbut_down = 1;
+        enabler.mouse_lbut_lift = 0;
+        g_mouse_emu.click_state = MouseEmulationState::CLICK_UP;
+    } else if (g_mouse_emu.click_state == MouseEmulationState::CLICK_UP) {
+        enabler.mouse_lbut = 0;
+        enabler.mouse_lbut_down = 0;
+        enabler.mouse_lbut_lift = 1;
+        g_mouse_emu.click_state = MouseEmulationState::CLICK_NONE;
+    } else {
+        if (enabler.mouse_lbut_lift) {
+            enabler.mouse_lbut_lift = 0;
+        }
+    }
+
+    if (g_mouse_emu.right_click_state == MouseEmulationState::CLICK_DOWN) {
+        enabler.mouse_rbut = 1;
+        enabler.mouse_rbut_down = 1;
+        enabler.mouse_rbut_lift = 0;
+        g_mouse_emu.right_click_state = MouseEmulationState::CLICK_UP;
+    } else if (g_mouse_emu.right_click_state == MouseEmulationState::CLICK_UP) {
+        enabler.mouse_rbut = 0;
+        enabler.mouse_rbut_down = 0;
+        enabler.mouse_rbut_lift = 1;
+        g_mouse_emu.right_click_state = MouseEmulationState::CLICK_NONE;
+    } else {
+        if (enabler.mouse_rbut_lift) {
+            enabler.mouse_rbut_lift = 0;
+        }
+    }
+
+    if (g_mouse_emu.middle_click_state == MouseEmulationState::CLICK_DOWN) {
+        enabler.mouse_mbut = 1;
+        enabler.mouse_mbut_down = 1;
+        enabler.mouse_mbut_lift = 0;
+        g_mouse_emu.middle_click_state = MouseEmulationState::CLICK_UP;
+    } else if (g_mouse_emu.middle_click_state == MouseEmulationState::CLICK_UP) {
+        enabler.mouse_mbut = 0;
+        enabler.mouse_mbut_down = 0;
+        enabler.mouse_mbut_lift = 1;
+        g_mouse_emu.middle_click_state = MouseEmulationState::CLICK_NONE;
+    } else {
+        if (enabler.mouse_mbut_lift) {
+            enabler.mouse_mbut_lift = 0;
+        }
+    }
+}
+
+EmuKeyBind parse_emu_key_string(std::string str) {
+    EmuKeyBind bind;
+    std::string lower = str;
+    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+
+    if (lower.find("ctrl+") != std::string::npos) {
+        bind.ctrl = true;
+    }
+    if (lower.find("alt+") != std::string::npos) {
+        bind.alt = true;
+    }
+    if (lower.find("shift+") != std::string::npos) {
+        bind.shift = true;
+    }
+
+    size_t last_plus = str.find_last_of('+');
+    std::string key_name = (last_plus == std::string::npos) ? str : str.substr(last_plus + 1);
+
+    auto it = sdlNames.right.find(key_name);
+    if (it != sdlNames.right.end()) {
+        bind.key = it->second;
+    } else {
+        if (key_name.length() == 1) {
+            char c = key_name[0];
+            if (c >= 'A' && c <= 'Z') {
+                c = c - 'A' + 'a';
+                bind.shift = true;
+            }
+            bind.key = (SDL_Keycode)c;
+        }
+    }
+    return bind;
+}
+
+void write_default_mouse_emu_config(const std::string& path) {
+    std::ofstream out(path);
+    if (!out.is_open()) return;
+    out << "# Dwarf Fortress Mouse Emulation Config\n";
+    out << "# Format: [BIND_ACTION:ACTION_NAME:KeyCombo]\n\n";
+    out << "[BIND_ACTION:TOGGLE_MOUSE_MODE:Ctrl+m]\n";
+    out << "[BIND_ACTION:TOGGLE_MOUSE_MODE:F10]\n";
+    out << "[BIND_ACTION:APPROVE:Enter]\n";
+    out << "[BIND_ACTION:APPROVE:Ctrl+Space]\n";
+    out << "[BIND_ACTION:RIGHT_CLICK:Ctrl+r]\n";
+    out << "[BIND_ACTION:MIDDLE_CLICK:Ctrl+g]\n";
+    out << "[BIND_ACTION:MOVE_N:Up]\n";
+    out << "[BIND_ACTION:MOVE_N:8]\n";
+    out << "[BIND_ACTION:MOVE_S:Down]\n";
+    out << "[BIND_ACTION:MOVE_S:2]\n";
+    out << "[BIND_ACTION:MOVE_W:Left]\n";
+    out << "[BIND_ACTION:MOVE_W:4]\n";
+    out << "[BIND_ACTION:MOVE_E:Right]\n";
+    out << "[BIND_ACTION:MOVE_E:6]\n";
+    out << "[BIND_ACTION:MOVE_NW:7]\n";
+    out << "[BIND_ACTION:MOVE_NE:9]\n";
+    out << "[BIND_ACTION:MOVE_SW:1]\n";
+    out << "[BIND_ACTION:MOVE_SE:3]\n";
+}
+
+void load_mouse_emu_config() {
+    filest config_file("data/init/mouse_emu.txt");
+    auto any_loc = config_file.any_location();
+    if (!any_loc) {
+        write_default_mouse_emu_config(config_file.canon_location().string());
+        any_loc = config_file.any_location();
+    }
+    if (!any_loc) return;
+
+    std::ifstream s(any_loc.value().string());
+    if (!s.good()) return;
+
+    static const string bind_action("[BIND_ACTION:*:*]");
+    vector<string> match;
+    string line;
+
+    while (getline(s, line)) {
+        if (parse_line(line, bind_action, match)) {
+            string act_name = match[1];
+            string key_combo = match[2];
+
+            EmuAction act = EMU_ACT_COUNT;
+            if (act_name == "TOGGLE_MOUSE_MODE") act = EMU_ACT_TOGGLE_MOUSE;
+            else if (act_name == "APPROVE") act = EMU_ACT_APPROVE;
+            else if (act_name == "RIGHT_CLICK") act = EMU_ACT_RIGHT_CLICK;
+            else if (act_name == "MIDDLE_CLICK") act = EMU_ACT_MIDDLE_CLICK;
+            else if (act_name == "MOVE_N") act = EMU_ACT_MOVE_N;
+            else if (act_name == "MOVE_NE") act = EMU_ACT_MOVE_NE;
+            else if (act_name == "MOVE_E") act = EMU_ACT_MOVE_E;
+            else if (act_name == "MOVE_SE") act = EMU_ACT_MOVE_SE;
+            else if (act_name == "MOVE_S") act = EMU_ACT_MOVE_S;
+            else if (act_name == "MOVE_SW") act = EMU_ACT_MOVE_SW;
+            else if (act_name == "MOVE_W") act = EMU_ACT_MOVE_W;
+            else if (act_name == "MOVE_NW") act = EMU_ACT_MOVE_NW;
+
+            if (act != EMU_ACT_COUNT) {
+                EmuKeyBind bind = parse_emu_key_string(key_combo);
+                if (bind.key != SDLK_UNKNOWN) {
+                    emu_bindings[bind] = act;
+                }
+            }
+        }
+    }
+    s.close();
+}
+
+void execute_emu_action(EmuAction act) {
+    switch (act) {
+        case EMU_ACT_TOGGLE_MOUSE:
+            g_mouse_emu.enabled = !g_mouse_emu.enabled;
+            if (g_mouse_emu.enabled) {
+                g_mouse_emu.cur_x = init.display.grid_x / 2;
+                g_mouse_emu.cur_y = init.display.grid_y / 2;
+            } else {
+                enabler.mouse_lbut = 0;
+                enabler.mouse_lbut_down = 0;
+                enabler.mouse_lbut_lift = 0;
+                enabler.mouse_rbut = 0;
+                enabler.mouse_rbut_down = 0;
+                enabler.mouse_rbut_lift = 0;
+                enabler.mouse_mbut = 0;
+                enabler.mouse_mbut_down = 0;
+                enabler.mouse_mbut_lift = 0;
+                enabler.tracking_on = 0;
+            }
+            break;
+        case EMU_ACT_APPROVE:
+            trigger_approve();
+            break;
+        case EMU_ACT_RIGHT_CLICK:
+            g_mouse_emu.right_click_state = MouseEmulationState::CLICK_DOWN;
+            break;
+        case EMU_ACT_MIDDLE_CLICK:
+            g_mouse_emu.middle_click_state = MouseEmulationState::CLICK_DOWN;
+            break;
+        case EMU_ACT_MOVE_N: move_mouse_emu(0, -1); break;
+        case EMU_ACT_MOVE_NE: move_mouse_emu(1, -1); break;
+        case EMU_ACT_MOVE_E: move_mouse_emu(1, 0); break;
+        case EMU_ACT_MOVE_SE: move_mouse_emu(1, 1); break;
+        case EMU_ACT_MOVE_S: move_mouse_emu(0, 1); break;
+        case EMU_ACT_MOVE_SW: move_mouse_emu(-1, 1); break;
+        case EMU_ACT_MOVE_W: move_mouse_emu(-1, 0); break;
+        case EMU_ACT_MOVE_NW: move_mouse_emu(-1, -1); break;
+        default: break;
+    }
+}
+
+bool handle_mouse_emu_input_sdl(const SDL_Event &e, Uint32 now) {
+    if (e.type != SDL_KEYDOWN && e.type != SDL_KEYUP) return false;
+    bool down = (e.type == SDL_KEYDOWN);
+
+    EmuKeyBind match;
+    match.key = e.key.keysym.sym;
+    Uint16 mod = e.key.keysym.mod;
+    match.ctrl = (mod & KMOD_CTRL);
+    match.alt = (mod & KMOD_ALT);
+    match.shift = (mod & KMOD_SHIFT);
+
+    auto it = emu_bindings.find(match);
+    if (it == emu_bindings.end()) {
+        if (match.shift && match.key >= 'a' && match.key <= 'z') {
+            EmuKeyBind match_no_shift = match;
+            match_no_shift.shift = false;
+            it = emu_bindings.find(match_no_shift);
+        }
+    }
+
+    if (it != emu_bindings.end()) {
+        if (down) {
+            execute_emu_action(it->second);
+        }
+        return true;
+    }
+
+    return false;
+}
+
+bool handle_mouse_emu_input_ncurses(int key, bool esc) {
+    EmuKeyBind match;
+    match.ctrl = false;
+    match.alt = esc;
+    match.shift = false;
+    match.key = SDLK_UNKNOWN;
+
+    if (key == -10) match.key = SDLK_RETURN;
+    else if (key == -9) match.key = SDLK_TAB;
+    else if (key == -27) match.key = SDLK_ESCAPE;
+    else if (key == -127) match.key = SDLK_BACKSPACE;
+    else if (key < 0 && key >= -26) {
+        match.ctrl = true;
+        match.key = (SDL_Keycode)(SDLK_a + (-key) - 1);
+    } else if (key <= -32 && key >= -126) {
+        match.key = (SDL_Keycode)-key;
+        if (match.key > 64 && match.key < 91) {
+            match.key = (SDL_Keycode)(match.key + 32);
+            match.shift = true;
+        }
+    } else if (key > 0) {
+        switch (key) {
+            case KEY_DOWN: match.key = SDLK_DOWN; break;
+            case KEY_UP: match.key = SDLK_UP; break;
+            case KEY_LEFT: match.key = SDLK_LEFT; break;
+            case KEY_RIGHT: match.key = SDLK_RIGHT; break;
+            case KEY_BACKSPACE: match.key = SDLK_BACKSPACE; break;
+            case KEY_F(1): match.key = SDLK_F1; break;
+            case KEY_F(2): match.key = SDLK_F2; break;
+            case KEY_F(3): match.key = SDLK_F3; break;
+            case KEY_F(4): match.key = SDLK_F4; break;
+            case KEY_F(5): match.key = SDLK_F5; break;
+            case KEY_F(6): match.key = SDLK_F6; break;
+            case KEY_F(7): match.key = SDLK_F7; break;
+            case KEY_F(8): match.key = SDLK_F8; break;
+            case KEY_F(9): match.key = SDLK_F9; break;
+            case KEY_F(10): match.key = SDLK_F10; break;
+            case KEY_F(11): match.key = SDLK_F11; break;
+            case KEY_F(12): match.key = SDLK_F12; break;
+            case KEY_DC: match.key = SDLK_DELETE; break;
+            case KEY_NPAGE: match.key = SDLK_PAGEDOWN; break;
+            case KEY_PPAGE: match.key = SDLK_PAGEUP; break;
+            case KEY_ENTER: match.key = SDLK_RETURN; break;
+        }
+    }
+
+    auto it = emu_bindings.find(match);
+    if (it != emu_bindings.end()) {
+        execute_emu_action(it->second);
+        return true;
+    }
+
+    return false;
 }

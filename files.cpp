@@ -15,7 +15,7 @@
 
 extern "C" {
 #include <zlib.h>
-#include "../zlib/contrib/minizip/unzip.h"
+#include "minizip/unzip.h"
 #ifndef WIN32
 # include <sys/types.h>
 # include <sys/stat.h>

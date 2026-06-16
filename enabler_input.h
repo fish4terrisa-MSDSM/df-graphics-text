@@ -8,12 +8,15 @@
 #include <string>
 #include <set>
 #include <list>
+#include <vector>
+#include <variant>
+#include <map>
 
 #include "ViewBase.h"
 #include "keybindings.h"
 #include "files.h"
 #ifdef CURSES
-//#include "curses.h"
+#include "curses.h"
 #endif
 #include <SDL2/SDL.h>
 
@@ -37,6 +40,58 @@ std::string encode_utf8(int unicode);
 #define DFMOD_SHIFT 1
 #define DFMOD_CTRL 2
 #define DFMOD_ALT 4
+
+enum EmuAction {
+    EMU_ACT_TOGGLE_MOUSE,
+    EMU_ACT_APPROVE,
+    EMU_ACT_RIGHT_CLICK,
+    EMU_ACT_MIDDLE_CLICK,
+    EMU_ACT_MOVE_N,
+    EMU_ACT_MOVE_NE,
+    EMU_ACT_MOVE_E,
+    EMU_ACT_MOVE_SE,
+    EMU_ACT_MOVE_S,
+    EMU_ACT_MOVE_SW,
+    EMU_ACT_MOVE_W,
+    EMU_ACT_MOVE_NW,
+    EMU_ACT_COUNT
+};
+
+struct EmuKeyBind {
+    bool ctrl = false;
+    bool alt = false;
+    bool shift = false;
+    SDL_Keycode key = SDLK_UNKNOWN;
+
+    bool operator<(const EmuKeyBind& o) const {
+        if (ctrl != o.ctrl) return ctrl < o.ctrl;
+        if (alt != o.alt) return alt < o.alt;
+        if (shift != o.shift) return shift < o.shift;
+        return key < o.key;
+    }
+};
+
+struct MouseEmulationState {
+    bool enabled = false;
+    int cur_x = 0, cur_y = 0;
+
+    enum ClickState {
+        CLICK_NONE,
+        CLICK_DOWN,
+        CLICK_UP
+    };
+    ClickState click_state = CLICK_NONE; // Left click
+    ClickState right_click_state = CLICK_NONE;
+    ClickState middle_click_state = CLICK_NONE;
+};
+
+extern MouseEmulationState g_mouse_emu;
+extern std::map<EmuKeyBind, EmuAction> emu_bindings;
+
+void load_mouse_emu_config();
+void update_mouse_emulation();
+bool handle_mouse_emu_input_sdl(const SDL_Event &e, Uint32 now);
+bool handle_mouse_emu_input_ncurses(int key, bool esc);
 
 struct EventMatch {
   MatchType type;

@@ -1,7 +1,13 @@
 #include <cassert>
+#include <unordered_map>
+#include <string>
+#include <vector>
 
 #include "enabler.h"
 #include "init.h"
+
+std::unordered_map<std::string, std::vector<long>> global_filename_to_texpos;
+std::unordered_map<std::string, std::string> global_token_to_filename;
 
 // Used to sort textures
 struct vsize_pos {
@@ -198,6 +204,12 @@ void textures::load_multi_pdim(const std::filesystem::path &filename, long *tex_
   SDL_FreeSurface(src);
   // Re-upload textures if necessary
   enabler.reset_textures();
+
+  std::string fname = filename.filename().string();
+  global_filename_to_texpos[fname].clear();
+  for (int i = 0; i < dimx * dimy; i++) {
+      global_filename_to_texpos[fname].push_back(tex_pos[i]);
+  }
 }
 
 void textures::load_multi_pdim(const std::filesystem::path &filename, svector<long> &tex_pos, long dimx,
@@ -235,6 +247,12 @@ void textures::load_multi_pdim(const std::filesystem::path &filename, svector<lo
   SDL_FreeSurface(src);
   // Re-upload textures if necessary
   enabler.reset_textures();
+
+  std::string fname = filename.filename().string();
+  global_filename_to_texpos[fname].clear();
+  for (int i = 0; i < dimx * dimy; i++) {
+      global_filename_to_texpos[fname].push_back(tex_pos[i]);
+  }
 }
 
 void textures::refresh_multi_pdim(const std::filesystem::path &filename, svector<long> &tex_pos, long dimx,

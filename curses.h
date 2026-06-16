@@ -13,6 +13,7 @@ extern "C" {
 # undef COLOR_CYAN
 # undef COLOR_RED
 # undef COLOR_YELLOW
+# undef scroll
 # include <dlfcn.h>
 #endif
 }

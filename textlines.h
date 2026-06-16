@@ -2,6 +2,7 @@
 #define TEXTLINES_H
 
 #include <filesystem>
+#include "enabler.h"
 
 struct textlinesst
 {

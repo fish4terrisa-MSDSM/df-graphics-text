@@ -1,4 +1,5 @@
 #include "keybindings.h"
+#include "enabler_input.h"
 
 using namespace std;
 
@@ -3914,4 +3915,5 @@ void keybinding_init() {
 	  {SDLK_z, 'z'},
 		};
   unicodeCapitals = { 'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z' };
+	load_mouse_emu_config();
 }

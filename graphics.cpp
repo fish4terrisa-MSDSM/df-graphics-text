@@ -12,7 +12,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <zlib.h>
-#include "../zlib/contrib/minizip/unzip.h"
+#include "minizip/unzip.h"
 #include <cassert>
 
 #include "svector.h"
@@ -71,7 +71,7 @@ typedef int32_t Ordinal;
 #define _XOPEN_SOURCE_EXTENDED
 #endif
 #ifdef CURSES
-//#include "curses.h"
+#include "curses.h"
 #endif
 using namespace std;
 
@@ -79,8 +79,10 @@ using namespace std;
 #pragma comment( lib, "opengl32.lib" )			// Search For OpenGL32.lib While Linking
 #pragma comment( lib, "glu32.lib" )				// Search For GLu32.lib While Linking
 
+extern std::unordered_map<std::string, std::string> global_token_to_filename;
+
 extern enablerst enabler;
-extern texture_handlerst texture;
+//extern texture_handlerst texture;
 graphicst gps;
 extern interfacest gview;
 
@@ -861,6 +863,26 @@ void graphicst::prepare_graphics(const std::filesystem::path &src_dir)
 		auto str=tile_page_file.string();
 		setuplines.load_raw_to_lines(str.c_str());
 
+		std::string current_token;
+		for(size_t i=0; i<setuplines.text.str.size(); i++) {
+			std::string line = setuplines.text.str[i]->dat;
+			size_t pos = line.find("[TILE_PAGE:");
+			if(pos != std::string::npos) {
+				size_t end = line.find(']', pos);
+				if(end != std::string::npos)
+					current_token = line.substr(pos + 11, end - pos - 11);
+			}
+			pos = line.find("[FILE:");
+			if(pos != std::string::npos && !current_token.empty()) {
+				size_t end = line.find(']', pos);
+				if(end != std::string::npos) {
+					std::string fpath = line.substr(pos + 6, end - pos - 6);
+					std::filesystem::path p(fpath);
+					global_token_to_filename[current_token] = p.filename().string();
+				}
+			}
+		}
+
 		errorlog_prefix="*** Error(s) found in the file \"";
 		errorlog_prefix+=str;
 		errorlog_prefix+='\"';
@@ -1219,6 +1241,8 @@ void render_things()
 	currentscreen->widgets.render(curtick);
 	}
   else gps.erasescreen();
+
+	hooks_prerender();
 
   // Render REC when recording macros. Definitely want this screen-specific. Or do we?
   const Time now = SDL_GetTicks();
