@@ -2,8 +2,16 @@
 # Tested on GNU/Linux (Arch Linux, x86_64 amd)
 
 # Install Location Configuration
+UNAME_M := $(shell uname -m)
+
+ifneq (,$(filter $(UNAME_M),arm64 aarch64))
+    ARCH := arm64
+else
+    ARCH := $(UNAME_M)
+endif
+
 INCPATH = -I/usr/include -Ifmod/inc
-LIBPATH = -L/usr/lib -Lfmod/lib/$(shell uname -m)
+LIBPATH = -L/usr/lib -Lfmod/lib/$(ARCH)
 LINKOS = -lSDL2 -lSDL2_image -lSDL2_mixer -lSDL2_ttf -lz -ldl -lpthread -lncurses -lfmod -rdynamic
 
 # Compilation Settings
