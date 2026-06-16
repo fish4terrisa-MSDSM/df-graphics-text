@@ -1,0 +1,35 @@
+# Dwarf Fortress Keyboard-driven Mouse Emulation Config
+# Format: [BIND_ACTION:ACTION_NAME:KeyCombo]
+# KeyCombo supports Ctrl+, Alt+, Shift+ prefixes and standard key names.
+# Custom ncurses keys also map cleanly to these names (e.g. ncurses arrow keys map to "Up", "Down", "Left", "Right")
+
+# Toggle Emulation Mode: Toggle on/off
+[BIND_ACTION:TOGGLE_MOUSE_MODE:Ctrl+n]
+[BIND_ACTION:TOGGLE_MOUSE_MODE:F10]
+
+# Approve action: Simulate mouse left-click on the current grid tile
+[BIND_ACTION:APPROVE:Enter]
+[BIND_ACTION:APPROVE:Ctrl+Space]
+
+# Right Click (RIGHT_CLICK)
+# Simulates pressing the Right Mouse Button (useful for backing out of menus).
+[BIND_ACTION:RIGHT_CLICK:Ctrl+r]
+[BIND_ACTION:RIGHT_CLICK:Back_Quote]
+
+# Middle Click (MIDDLE_CLICK)
+# Simulates pressing the Middle Mouse Button / Scroll Wheel button.
+[BIND_ACTION:MIDDLE_CLICK:Ctrl+g]
+
+# Directional navigation mapping (Supports Arrow Keys and Numpad)
+[BIND_ACTION:MOVE_N:Up]
+
+[BIND_ACTION:MOVE_S:Down]
+
+[BIND_ACTION:MOVE_W:Left]
+
+[BIND_ACTION:MOVE_E:Right]
+
+# [BIND_ACTION:MOVE_NW:7]
+# [BIND_ACTION:MOVE_NE:9]
+# [BIND_ACTION:MOVE_SW:1]
+# [BIND_ACTION:MOVE_SE:3]
