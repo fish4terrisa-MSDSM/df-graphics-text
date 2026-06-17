@@ -1452,10 +1452,14 @@ bool handle_mouse_emu_input_sdl(const SDL_Event &e, Uint32 now) {
     }
 
     if (it != emu_bindings.end()) {
-        if (down) {
-            execute_emu_action(it->second);
-        }
-        return true;
+      EmuAction action = it->second;
+      if (!g_mouse_emu.enabled && action != EMU_ACT_TOGGLE_MOUSE) {
+        return false;
+      }
+      if (down) {
+        execute_emu_action(action);
+      }
+      return true;
     }
 
     return false;
@@ -1509,8 +1513,12 @@ bool handle_mouse_emu_input_ncurses(int key, bool esc) {
 
     auto it = emu_bindings.find(match);
     if (it != emu_bindings.end()) {
-        execute_emu_action(it->second);
-        return true;
+      EmuAction action = it->second;
+      if (!g_mouse_emu.enabled && action != EMU_ACT_TOGGLE_MOUSE) {
+        return false;
+      }
+      execute_emu_action(action);
+      return true;
     }
 
     return false;
