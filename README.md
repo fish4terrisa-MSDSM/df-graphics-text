@@ -30,8 +30,8 @@ These are the bugs that currently we cannot fix. There might be bugs that I have
 
 ## Status
  - The game looks normal and in my limited tests it seems normal, quite stable and playable.
+ - It works fine with DFHack during my limited testing.
  - I havent tested it much since I'm still learning the control of v50+ (I've been a v47.05 player for a long time, this is quite new for me and I'm bulding my vim style keybind. If anyone have a prebuilt vim style keybind for fortress mode and adventure mode please send me.
- - Havent test it with dfhack yet.
 
 ## Limitation
  - Only support Linux, wont support Windows(and thus wont support Dwarf Fortress running in Wine)
