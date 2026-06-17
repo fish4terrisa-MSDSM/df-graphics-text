@@ -116,6 +116,8 @@ if(luminosity>255)luminosity=255;
 // It uses the same pixel format (RGBA, R at lowest address) regardless of
 // hardware.
 SDL_Surface *canonicalize_format(SDL_Surface *src, bool convert_magenta) {
+  if (!src) return NULL;
+
   SDL_PixelFormat fmt;
   fmt.palette = NULL;
   fmt.BitsPerPixel = 32;
@@ -174,10 +176,16 @@ long textures::add_texture(SDL_Surface *surface) {
 void textures::load_multi_pdim(const std::filesystem::path &filename, long *tex_pos, long dimx,
 			       long dimy, bool convert_magenta,
 			       long *disp_x, long *disp_y) {
-  
+
   SDL_Surface *raw = IMG_Loadfile(filest(filename));
   if (!raw) {
       warning_modal_ok("Not found: " + filename.string(),[]() {exit(1); });
+      *disp_x = 0;
+      *disp_y = 0;
+      for (int i = 0; i < dimx * dimy; i++) {
+          tex_pos[i] = 0;
+      }
+      return;
   }
   SDL_Surface *src = canonicalize_format(raw, convert_magenta);
   SDL_SetSurfaceBlendMode(src,SDL_BLENDMODE_NONE);
@@ -216,9 +224,14 @@ void textures::load_multi_pdim(const std::filesystem::path &filename, svector<lo
 			       long dimy, bool convert_magenta,
 			       long *disp_x, long *disp_y) {
   SDL_Surface *raw=IMG_Loadfile(filest(filename));
-  if (!raw) 
+  if (!raw)
       {
       warning_modal_ok("Not found: " + filename.string(),[]() {exit(1); });
+      *disp_x = 0;
+      *disp_y = 0;
+      tex_pos.resize(dimx*dimy);
+      for(int i=0; i<dimx*dimy; i++) tex_pos[i] = 0;
+      return;
     }
   tex_pos.resize(dimx*dimy);
   auto tp_s = tex_pos.begin();
@@ -260,6 +273,7 @@ void textures::refresh_multi_pdim(const std::filesystem::path &filename, svector
   SDL_Surface *raw=IMG_Loadfile(filest(filename));
   if (!raw) {
       warning_modal_ok("Not found: " + filename.string(),[]() {exit(1); });
+      return;
   }
 
   long ind=0;
@@ -292,6 +306,7 @@ cached_texturest textures::load(const std::filesystem::path &filename, bool conv
   SDL_Surface *raw=IMG_Loadfile(filest(filename));
   if (!raw) {
       warning_modal_ok("Not found: " + filename.string(),[]() {exit(1); });
+      return cached_texturest();
   }
   SDL_Surface *tex = canonicalize_format(raw, convert_magenta);
   return cached_texturest(tex);

@@ -11,6 +11,7 @@
 #include <set>
 #include <stdio.h>
 #include <codecvt>
+#include <cctype>
 //#include <unistd.h>
 
 extern "C" {
@@ -522,6 +523,42 @@ std::filesystem::path filest::non_canon_location() const {
 		}
 	}
 
+#ifndef WIN32
+static std::optional<std::filesystem::path> resolve_case_insensitive(const std::filesystem::path &base, const std::filesystem::path &relative) {
+    std::filesystem::path current = base;
+    std::error_code ec;
+    
+    for (const auto &component : relative) {
+        if (component == "." || component == "..") {
+            current /= component;
+            continue;
+        }
+        
+        std::string target = component.string();
+        std::transform(target.begin(), target.end(), target.begin(), [](unsigned char c) { return std::tolower(c); });
+        
+        bool found = false;
+        if (std::filesystem::exists(current, ec)) {
+            for (const auto &entry : std::filesystem::directory_iterator(current, ec)) {
+                std::string entry_name = entry.path().filename().string();
+                std::string entry_name_lower = entry_name;
+                std::transform(entry_name_lower.begin(), entry_name_lower.end(), entry_name_lower.begin(), [](unsigned char c) { return std::tolower(c); });
+                
+                if (entry_name_lower == target) {
+                    current /= entry_name;
+                    found = true;
+                    break;
+                }
+            }
+        }
+        if (!found) {
+            return std::nullopt;
+        }
+    }
+    return current;
+}
+#endif
+
 std::optional<std::filesystem::path> filest::any_location() const {
 	auto canon=canon_location();
 	std::error_code ec;
@@ -538,6 +575,17 @@ std::optional<std::filesystem::path> filest::any_location() const {
 			}
 		else
 			{
+#ifndef WIN32
+            // Case-insensitive fallback for Linux/macOS
+            std::filesystem::path base_p = base_first() ? get_base_path() : get_pref_path();
+            if (auto ci_path = resolve_case_insensitive(base_p, path)) {
+                return ci_path;
+            }
+            std::filesystem::path non_base_p = base_first() ? get_pref_path() : get_base_path();
+            if (auto ci_path = resolve_case_insensitive(non_base_p, path)) {
+                return ci_path;
+            }
+#endif
 			return std::nullopt;
 			}
 		}
