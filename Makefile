@@ -16,7 +16,7 @@ LINKOS = -lSDL2 -lSDL2_image -lSDL2_mixer -lSDL2_ttf -lz -ldl -lpthread -lncurse
 
 # Compilation Settings
 CC = g++ -std=c++20
-CF = -Wfatal-errors -O3 -g -DDF_GLUE_CPP -shared -DCURSES -fPIC
+CF = -Wfatal-errors -O3 -g -DDF_GLUE_CPP -shared -DCURSES -fPIC -Denablerst=df_enablerst -Dviewscreen_movieplayerst=df_viewscreen_movieplayerst -DKeybindingScreen=df_KeybindingScreen -DMacroScreenLoad=df_MacroScreenLoad -DMacroScreenSave=df_MacroScreenSave
 
 UNAME := $(shell uname)
 ifeq ($(UNAME), Linux)			#Detect GNU/Linux
