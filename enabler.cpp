@@ -803,6 +803,11 @@ void enablerst::async_loop() {
         async_frombox.write(async_msg(async_msg::quit));
         return; // We're done.
       }
+      if (g_mouse_emu.enabled) {
+        enabler.mouse_lbut_down = 0;
+        enabler.mouse_rbut_down = 0;
+        enabler.mouse_mbut_down = 0;
+      }
       simticks++;
       async_frames--;
       if (async_frames < 0) async_frames = 0;
