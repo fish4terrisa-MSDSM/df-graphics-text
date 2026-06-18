@@ -315,7 +315,7 @@ namespace widgets {
         short fg,bg;
         char bright;
         uint32_t flag;
-        character(char c) : c(c) {}
+        character(char c);
         };
 
     // Just displays a string where it's put, nothing special--only here to allow text to conform to the widget system
@@ -449,7 +449,7 @@ namespace widgets {
     class keybinding_display : public widget {
         int binding;
     public:
-        keybinding_display(int binding) : binding(binding) {}
+        keybinding_display(int binding);
         virtual void arrange();
         virtual void render(uint32_t curtick=0);
         };
@@ -876,15 +876,15 @@ namespace widgets {
 
     class multifilter : public widget
         {
+    public:
         class indiv_filter : public filter
             {
             public:
             virtual void set_filtered(int32_t idx);
             std::unordered_set<std::shared_ptr<widget>> &get_filtered_set();
-            indiv_filter(std::shared_ptr<container> c) : filter(c) {}
+            indiv_filter(std::shared_ptr<container> c);
             };
         svector<std::shared_ptr<indiv_filter>> filters;
-    public:
         multifilter(std::shared_ptr<container>);
         std::shared_ptr<indiv_filter> add_new_filter_block();
         std::weak_ptr<container> container_parent;

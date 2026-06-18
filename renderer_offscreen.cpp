@@ -45,6 +45,11 @@ renderer_offscreen::~renderer_offscreen() {
 
 }
 
+class df_renderer_offscreen : public renderer_offscreen {
+public:
+    df_renderer_offscreen() : renderer_offscreen(1, 1) {}
+};
+
 // Create an offscreen renderer of a given grid-size
 renderer_offscreen::renderer_offscreen(int grid_x, int grid_y) {
   screen = NULL;
@@ -79,6 +84,18 @@ renderer_offscreen::renderer_offscreen(int grid_x, int grid_y) {
   renderer::screentexpos_top_anchored_y = gps.screentexpos_top_anchored_y;
   renderer::screentexpos_top_flag = gps.screentexpos_top_flag;
   renderer::screentexpos_refresh_buffer = gps.screentexpos_refresh_buffer;
+
+  static bool nesting = false;
+  if (!nesting) {
+      static void* df_vtable = nullptr;
+      if (!df_vtable) {
+          nesting = true;
+          df_renderer_offscreen dummy;
+          nesting = false;
+          df_vtable = *(void**)&dummy;
+      }
+      *(void**)this = df_vtable;
+  }
 }
 
 // Slurp the entire gps content into the renderer at some given offset

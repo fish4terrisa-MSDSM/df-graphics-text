@@ -519,6 +519,13 @@ void blank_anchors(int32_t sy,int32_t sx,int32_t ey,int32_t ex) {
 		}
 	}
 
+namespace widgets {
+    class df_widget : public widget {
+    public:
+        df_widget() : widget() {}
+    };
+}
+
 widget::widget() {
 	flag=WIDGET_VISIBILITY_ACTUALLY_VISIBLE|WIDGET_CAN_KEY_ACTIVATE;
 	name = "";
@@ -527,6 +534,17 @@ widget::widget() {
 	set_anchors_preset(LayoutPreset::TOP_LEFT);
 	set_offsets(0,0,0,0);
 	min_h=min_w=0;
+	static bool nesting = false;
+	if (!nesting) {
+		static void* df_vtable = nullptr;
+		if (!df_vtable) {
+			nesting = true;
+			df_widget dummy;
+			nesting = false;
+			df_vtable = *(void**)&dummy;
+		}
+		*(void**)this = df_vtable;
+	}
 }
 
 void widget::move_to_anchor() {
@@ -1350,6 +1368,12 @@ bool widget::set_global_positioning(bool n) {
 
 void widget::clear() {}
 
+namespace widgets {
+    class df_folder : public folder {
+    public:
+        df_folder() : folder(nullptr) {}
+    };
+}
 
 folder::folder(std::shared_ptr<container> parent)
 	{
@@ -1372,6 +1396,17 @@ folder::folder(std::shared_ptr<container> parent)
 	label.set_offset(Side::LEFT,4);
 	last_visible=true;
 	controlled_visible=true;
+	static bool nesting = false;
+	if (!nesting) {
+		static void* df_vtable = nullptr;
+		if (!df_vtable) {
+			nesting = true;
+			df_folder dummy;
+			nesting = false;
+			df_vtable = *(void**)&dummy;
+		}
+		*(void**)this = df_vtable;
+	}
 	}
 
 void folder::arrange()
@@ -1406,6 +1441,13 @@ void folder::feed(std::set<InterfaceKey> &ev)
 	arrange();
 	}
 
+namespace widgets {
+    class df_filter : public filter {
+    public:
+        df_filter() : filter(nullptr) {}
+    };
+}
+
 filter::filter(std::shared_ptr<container> parent)
 	{
 	container_parent=parent;
@@ -1420,6 +1462,18 @@ filter::filter(std::shared_ptr<container> parent)
 		this->set_filtered(-1);
 		return true;
 		});
+
+	static bool nesting = false;
+	if (!nesting) {
+		static void* df_vtable = nullptr;
+		if (!df_vtable) {
+			nesting = true;
+			df_filter dummy;
+			nesting = false;
+			df_vtable = *(void**)&dummy;
+		}
+		*(void**)this = df_vtable;
+	}
 	}
 
 int32_t filter::get_filtered()
@@ -1570,9 +1624,49 @@ std::unordered_set<std::shared_ptr<widget>> &multifilter::indiv_filter::get_filt
 	return filters[filter_idx].filtered_set;
 	}
 
+namespace widgets {
+    class df_indiv_filter : public multifilter::indiv_filter {
+    public:
+        df_indiv_filter() : indiv_filter(nullptr) {}
+    };
+}
+
+multifilter::indiv_filter::indiv_filter(std::shared_ptr<container> c) : filter(c) {
+	static bool nesting = false;
+	if (!nesting) {
+		static void* df_vtable = nullptr;
+		if (!df_vtable) {
+			nesting = true;
+			df_indiv_filter dummy;
+			nesting = false;
+			df_vtable = *(void**)&dummy;
+		}
+		*(void**)this = df_vtable;
+	}
+}
+
+namespace widgets {
+    class df_multifilter : public multifilter {
+    public:
+        df_multifilter() : multifilter(nullptr) {}
+    };
+}
+
 multifilter::multifilter(std::shared_ptr<container> parent)
 	{
 	container_parent=parent;
+
+	static bool nesting = false;
+	if (!nesting) {
+		static void* df_vtable = nullptr;
+		if (!df_vtable) {
+			nesting = true;
+			df_multifilter dummy;
+			nesting = false;
+			df_vtable = *(void**)&dummy;
+		}
+		*(void**)this = df_vtable;
+	}
 	}
 
 std::shared_ptr<multifilter::indiv_filter> multifilter::add_new_filter_block()
@@ -1941,10 +2035,28 @@ void scroll_rows::arrange() {
 	container::arrange();
 }
 
+namespace widgets {
+    class df_radio_rows : public radio_rows {
+    public:
+        df_radio_rows() : radio_rows() {}
+    };
+}
+
 radio_rows::radio_rows() {
 	rows.set_parent(this);
 	selected=NULL;
 	rows.set_anchors_preset(widgets::LayoutPreset::FULL);
+	static bool nesting = false;
+	if (!nesting) {
+		static void* df_vtable = nullptr;
+		if (!df_vtable) {
+			nesting = true;
+			df_radio_rows dummy;
+			nesting = false;
+			df_vtable = *(void**)&dummy;
+		}
+		*(void**)this = df_vtable;
+	}
 	}
 
 std::shared_ptr<container> radio_rows::add_entry(const string &s,std::function<void(widget *)> f) {
@@ -2037,6 +2149,13 @@ void radio_rows::feed(std::set<InterfaceKey> &events) {
 	rows.feed(events);
 	}
 
+namespace widgets {
+    class df_table : public table {
+    public:
+        df_table() : table() {}
+    };
+}
+
 table::table()
 	{
 	labels=add_widget<columns_container>();
@@ -2051,6 +2170,17 @@ table::table()
 	key_display=add_widget<widget>();
 //	key_display->set_custom_render([](widgets::widget *w) {}); // TODO: some display of some sort
 	key_display->set_visible(false);
+	static bool nesting = false;
+	if (!nesting) {
+		static void* df_vtable = nullptr;
+		if (!df_vtable) {
+			nesting = true;
+			df_table dummy;
+			nesting = false;
+			df_vtable = *(void**)&dummy;
+		}
+		*(void**)this = df_vtable;
+	}
 	}
 
 void table::feed(set<InterfaceKey> &events)
@@ -2380,11 +2510,51 @@ void tabs::arrange() {
 	cur_tab->arrange();// arranging this one last gives it "priority", to solve various issues--arranging something twice in one frame should never cause problems
 }
 
+namespace widgets {
+    class df_keybinding_display : public keybinding_display {
+    public:
+        df_keybinding_display() : keybinding_display(0) {}
+    };
+}
+
+keybinding_display::keybinding_display(int binding) : binding(binding) {
+	static bool nesting = false;
+	if (!nesting) {
+		static void* df_vtable = nullptr;
+		if (!df_vtable) {
+			nesting = true;
+			df_keybinding_display dummy;
+			nesting = false;
+			df_vtable = *(void**)&dummy;
+		}
+		*(void**)this = df_vtable;
+	}
+}
+
+namespace widgets {
+    class df_better_button : public better_button {
+    public:
+        df_better_button() : better_button() {}
+    };
+}
+
 better_button::better_button() : widget() {
 	display_string = NULL;
 	texpos = NULL;
 	callback = NULL;
 	check_truth = NULL;
+
+	static bool nesting = false;
+	if (!nesting) {
+		static void* df_vtable = nullptr;
+		if (!df_vtable) {
+			nesting = true;
+			df_better_button dummy;
+			nesting = false;
+			df_vtable = *(void**)&dummy;
+		}
+		*(void**)this = df_vtable;
+	}
 }
 
 // If you use this constructor with any bool that doesn't have a static lifetime it will not be pretty
@@ -2406,6 +2576,18 @@ better_button::better_button(bool* b) : widget() {
 	check_truth = [b]() {
 		return *b;
 	};
+
+	static bool nesting = false;
+	if (!nesting) {
+		static void* df_vtable = nullptr;
+		if (!df_vtable) {
+			nesting = true;
+			df_better_button dummy;
+			nesting = false;
+			df_vtable = *(void**)&dummy;
+		}
+		*(void**)this = df_vtable;
+	}
 
 }
 
@@ -2625,6 +2807,27 @@ void character::render(uint32_t curtick)
 	gps.addchar_flag(c,1,flag);
 	}
 
+namespace widgets {
+    class df_character : public character {
+    public:
+        df_character() : character(' ') {}
+    };
+}
+
+character::character(char c) : c(c) {
+	static bool nesting = false;
+	if (!nesting) {
+		static void* df_vtable = nullptr;
+		if (!df_vtable) {
+			nesting = true;
+			df_character dummy;
+			nesting = false;
+			df_vtable = *(void**)&dummy;
+		}
+		*(void**)this = df_vtable;
+	}
+}
+
 text::text(const string& s) {
     fg = 7;
     bg = 0;
@@ -2779,10 +2982,29 @@ std::shared_ptr<widget> graphics_switcher::current_widget()
 		}
 	}
 
+namespace widgets {
+    class df_dropdown : public dropdown {
+    public:
+        df_dropdown() : dropdown() {}
+    };
+}
+
 dropdown::dropdown() : widget() {
     cur_selected = 0;
-	min_h=3;
+		min_h=3;
     set_callback([](auto i, auto j) {});
+		static bool nesting = false;
+
+		if (!nesting) {
+			static void* df_vtable = nullptr;
+			if (!df_vtable) {
+				nesting = true;
+				df_dropdown dummy;
+				nesting = false;
+				df_vtable = *(void**)&dummy;
+			}
+			*(void**)this = df_vtable;
+		}
 }
 
 dropdown::dropdown(std::initializer_list<string> new_options) : widget() {
@@ -2794,6 +3016,18 @@ dropdown::dropdown(std::initializer_list<string> new_options) : widget() {
         min_w = max(min_w, (int32_t)s.length() + 4);
     }
     set_callback([](auto i, auto j) {});
+
+		static bool nesting = false;
+		if (!nesting) {
+			static void* df_vtable = nullptr;
+			if (!df_vtable) {
+				nesting = true;
+				df_dropdown dummy;
+				nesting = false;
+				df_vtable = *(void**)&dummy;
+			}
+			*(void**)this = df_vtable;
+		}
 }
 
 void dropdown::add_option(std::string& s) {
