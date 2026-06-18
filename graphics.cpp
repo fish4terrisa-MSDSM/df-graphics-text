@@ -1223,7 +1223,7 @@ void render_things()
   //GRAB CURRENT SCREEN AT THE END OF THE LIST
   viewscreenst *currentscreen=&gview.view;
   while(currentscreen->child!=NULL)currentscreen=currentscreen->child;
-  
+
   //NO INTERFACE LEFT, LEAVE
   if(currentscreen==&gview.view)
 	{
@@ -1238,7 +1238,9 @@ void render_things()
 	uint32_t curtick=GetTickCount();
 	currentscreen->render(curtick);
 	// WANT THE WIDGETS TO RENDER LAST, BASICALLY ALWAYS--MOSTLY DFHACK, BUT OTHER REASONS TOO
-	currentscreen->widgets.render(curtick);
+	if (currentscreen->breakdownlevel == INTERFACE_BREAKDOWN_NONE && currentscreen->child == NULL) {
+		currentscreen->widgets.render(curtick);
+	}
 	}
   else gps.erasescreen();
 

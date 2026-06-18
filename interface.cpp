@@ -876,9 +876,11 @@ char interfacest::loop() {
   //MOVE SCREENS BACK
   switch(currentscreen->breakdownlevel) {
   case INTERFACE_BREAKDOWN_NONE: {
-    
+
     currentscreen->logic();
-	currentscreen->widgets.logic();
+	if (currentscreen->breakdownlevel == INTERFACE_BREAKDOWN_NONE && currentscreen->child == NULL) {
+		currentscreen->widgets.logic();
+	}
 
 #ifdef CURSES_MOVIES
 	if(currentscreen->movies_okay())
@@ -909,14 +911,16 @@ char interfacest::loop() {
 				}
 			}
         if (era.size() == 0) {
-			if (enabler.mouse_lbut || enabler.mouse_rbut || enabler.mouse_mbut || enabler.get_text_input()[0] != '\0') 
-				{ 
+			if (enabler.mouse_lbut || enabler.mouse_rbut || enabler.mouse_mbut || enabler.get_text_input()[0] != '\0')
+				{
 				currentscreen->widgets.feed(era);
-				currentscreen->feed(era); 
+				if (currentscreen->breakdownlevel == INTERFACE_BREAKDOWN_NONE && currentscreen->child == NULL) {
+					currentscreen->feed(era);
+				}
 				}
           break;
         }
-        
+
         //DO MOVIE COMMANDS
 #ifdef CURSES_MOVIES
         if (era.count(INTERFACEKEY_MOVIES)&&!currentscreen->key conflict(INTERFACEKEY_MOVIES))
@@ -985,7 +989,9 @@ char interfacest::loop() {
 		for (int i=0; i < repeats; i++)
 			{
 			currentscreen->widgets.feed(era);
+			if (currentscreen->breakdownlevel != INTERFACE_BREAKDOWN_NONE || currentscreen->child != NULL) break;
 			currentscreen->feed(era);
+			if (currentscreen->breakdownlevel != INTERFACE_BREAKDOWN_NONE || currentscreen->child != NULL) break;
 			}
         if (era.count(INTERFACEKEY_TOGGLE_FULLSCREEN)) {
           enabler.toggle_fullscreen();
