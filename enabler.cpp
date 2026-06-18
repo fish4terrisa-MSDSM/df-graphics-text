@@ -20,7 +20,8 @@ extern adv_music_statest adv_music_state;
 
 using namespace std;
 
-enablerst enabler;
+class df_enablerst : public enablerst {};
+df_enablerst enabler_private asm("enabler");
 
 // For the printGLError macro
 int glerrorcount = 0;
