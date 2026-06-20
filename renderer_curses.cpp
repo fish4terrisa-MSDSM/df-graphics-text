@@ -77,6 +77,23 @@ public:
     if (x < 0 || y < 0 || x >= last_w || y >= last_h) return;
     const unsigned char *s = gps.screen + (x * gps.dimy + y) * 8;
     uint32_t ch = s[0];
+    // 13 and 14 are sound indicators 
+    if (init.display.disable_sound_indicator && (ch == 13 || ch == 14)) {
+        const unsigned char *old_s = screen_old + (x * gps.dimy + y) * 8;
+        uint32_t old_ch = old_s[0];
+        if (old_ch != 13 && old_ch != 14 && old_ch != 0 && old_ch != 32) {
+            ch = old_ch;
+            uint8_t fr = old_s[1], fg = old_s[2], fb = old_s[3];
+            uint8_t br = old_s[4], bg = old_s[5], bb = old_s[6];
+            backbuffer[y * last_w + x] = {ch, fr, fg, fb, br, bg, bb};
+
+            unsigned char *write_s = gps.screen + (x * gps.dimy + y) * 8;
+            write_s[0] = ch;
+            write_s[1] = fr; write_s[2] = fg; write_s[3] = fb;
+            write_s[4] = br; write_s[5] = bg; write_s[6] = bb;
+            return;
+        }
+    }
     uint8_t fr = s[1], fg = s[2], fb = s[3];
     uint8_t br = s[4], bg = s[5], bb = s[6];
     backbuffer[y * last_w + x] = {ch, fr, fg, fb, br, bg, bb};
@@ -89,6 +106,27 @@ public:
     const unsigned char *s = gps.screen_top + (x * gps.dimy + y) * 8;
     uint32_t ch = s[0];
     if (ch == 0) return; // transparent if zero
+    
+    // 13 and 14 are sound indicators
+    if (init.display.disable_sound_indicator && (ch == 13 || ch == 14)) {
+        const unsigned char *old_s = screen_top_old + (x * gps.dimy + y) * 8;
+        uint32_t old_ch = old_s[0];
+        if (old_ch != 13 && old_ch != 14 && old_ch != 0 && old_ch != 32) {
+            ch = old_ch;
+            uint8_t fr = old_s[1], fg = old_s[2], fb = old_s[3];
+            uint8_t br = old_s[4], bg = old_s[5], bb = old_s[6];
+            backbuffer[y * last_w + x] = {ch, fr, fg, fb, br, bg, bb};
+
+            // Re-write to gps.screen_top so it propagates safely
+            unsigned char *write_s = gps.screen_top + (x * gps.dimy + y) * 8;
+            write_s[0] = ch;
+            write_s[1] = fr; write_s[2] = fg; write_s[3] = fb;
+            write_s[4] = br; write_s[5] = bg; write_s[6] = bb;
+            return;
+        } else {
+            return;
+        }
+    }
 
     uint8_t fr = s[1], fg = s[2], fb = s[3];
     uint8_t br = s[4], bg = s[5], bb = s[6];

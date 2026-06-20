@@ -88,6 +88,9 @@ init_displayst::init_displayst()
 	partial_print_count=0;
 
 	max_interface_percentage=100;
+
+	/* open source side graphic config */
+	disable_sound_indicator=false;
 }
 
 void initst::begin() {
@@ -651,6 +654,44 @@ void initst::begin() {
 			}
 			fseed2.close();
 		}
+
+	/* Initialize open source side graphics config */
+	filest graphics_file("data/init/graphics.txt");
+	if (!graphics_file.any_location()) {
+		std::ofstream out(graphics_file.canon_location().string());
+		if (out.is_open()) {
+			out << "# Graphics Configuration\n";
+			out << "# Set to NO to disable the musical note (♪) flashing over units when they make sounds in TEXT mode.\n";
+			out << "[SOUND_INDICATOR:YES]\n";
+		}
+	}
+
+	for (auto &f :{filest("data/init/graphics.txt").with_flags(FILE_FLAG_ALWAYS_BASE_FIRST),filest("prefs/graphics.txt")})
+	{
+		std::ifstream fseed=f.to_ifstream();
+		if (fseed.is_open())
+		{
+			string str;
+			while (std::getline(fseed,str))
+			{
+				if (str.length()>1)
+				{
+					string token;
+					string token2;
+					grab_token_string_pos(token,str,1);
+					if (str.length()>=token.length()+2)
+					{
+						grab_token_string_pos(token2,str,(int32_t)token.length()+2);
+					}
+					if (token == "SOUND_INDICATOR")
+					{
+						if (token2 == "NO") display.disable_sound_indicator = true;
+						else display.disable_sound_indicator = false;
+					}
+				}
+			}
+		}
+	}
         
 #ifdef _DEBUG
         enabler.window.isFullScreen = FALSE;

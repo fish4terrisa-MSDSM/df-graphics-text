@@ -99,6 +99,9 @@ class init_displayst
 
   InitDisplayFilterMode filter_mode;
 
+	/* open source side graphic config */
+	bool disable_sound_indicator;
+
   init_displayst();
 };
 
