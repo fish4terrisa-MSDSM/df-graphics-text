@@ -79,15 +79,26 @@ struct tile_pagest
 	void refresh_graphics();
 };
 
+struct layer_set_templatest
+{
+	string token;
+	textlinesst lines;
+};
+
+struct creature_defst;
+struct creature_graphicsst;
+struct creature_graphics_layer_setst;
+
 class texture_handlerst
 {
 	public:
 		svector<tile_pagest *> page;
 		svector<palette_pagest *> palette;
+		svector<layer_set_templatest *> layer_set_template;
 
 
 		void clean();
-		void adopt_new_lines(textlinesst &lines,const std::filesystem::path &graphics_dir);
+		void adopt_new_lines(textlinesst &lines,const std::filesystem::path &graphics_dir,creature_defst *use_cd,creature_graphicsst *use_cg,creature_graphics_layer_setst *use_cgls,bool log_errors);
 
 		~texture_handlerst()
 			{
@@ -109,6 +120,15 @@ class texture_handlerst
 			for(t=0;t<palette.size();t++)
 				{
 				if(palette[t]->token==tk)return palette[t];
+				}
+			return NULL;
+			}
+		layer_set_templatest *get_layer_set_template_by_token(string &tk)
+			{
+			int32_t t;
+			for(t=0;t<layer_set_template.size();t++)
+				{
+				if(layer_set_template[t]->token==tk)return layer_set_template[t];
 				}
 			return NULL;
 			}
